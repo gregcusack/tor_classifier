@@ -8,6 +8,8 @@
 * The issuer and subject urls of the certificate have been used in the past to help detect Tor trafic (source: https://www.rsreese.com/detecting-tor-traffic-with-bro-network-traffic-analyzer/)
 * The issuer/subject URLs of Tor traffic are random characters and have higher entropy than normal traffic certificate issuers/subjects
 * As a result, the entropy of the URLs are calculated.  Most Tor traffic URLs have an entropy > 2.9.
+	* Note, that this entropy threshold for calculating Tor traffic is likely to change as this project progresses.
+		* For example, this threshold could be calculated as some sort of average across large amounts of Tor traffic
 	* Entropy calculator found online at: http://pythonfiddle.com/shannon-entropy-calculation/
 * In the end, the system makes uses the IP comparison and entropy calculator to make an estimation on how likely the packet contains Tor traffic.
 * The system only ouputs possible Tor traffic for every client/server IP pair that it thinks may contain Tor traffic
