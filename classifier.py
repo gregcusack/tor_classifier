@@ -14,6 +14,14 @@ def get_cert_urls(packet):
 		load = packet[Raw].load
 	except IndexError:
 		return False
+
+	if len(load) < 73: #make sure raw long enough
+		return False
+
+	#look for server hello message
+	if load[0].encode("HEX") <> '16' or load[5].encode("HEX") <> '02':
+		return False
+	print("------------ Cert packet! -------------")
 	#look for web urls in raw
 	try:
 		issuer_begin_index = load.index('www.')
@@ -130,7 +138,17 @@ if __name__ == '__main__':
 				ip_list.append(line)
 	#Use scapy to read the input pcap into a pkt_list
 	pkt_list = rdpcap(pkts)
-
+	"""
+	pkt = pkt_list[4649]
+	raw = pkt[Raw].load
+	if raw[67].encode("HEX") <> '16':
+		print("bad")
+	if raw[72].encode("HEX") <> '0b':
+		print("also bad")
+	print(raw[67].encode("HEX"))
+	print(raw[72].encode("HEX"))
+	exit()
+	"""
 	tor_comm = {}
 	pkt_count = 0
 	#iterate through evey packet in the pcap file
