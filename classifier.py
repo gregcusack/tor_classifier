@@ -1,4 +1,6 @@
 from scapy.all import *
+import os
+#import re
 import math
 
 # Tor certs don't have same issuer and subject, but normal traffic does (not always though)
@@ -6,6 +8,12 @@ def istorCert(iss_url, subj_url):
 	if iss_url == subj_url:
 		return False
 	return True
+
+def valid_url(url):
+	response = os.system("fping -q " + url)
+	if response == 0:
+		return True
+	return False
 
 #return a packets issuer/subject urls (if there are any!)
 def get_cert_urls(packet):
@@ -21,18 +29,31 @@ def get_cert_urls(packet):
 	#look for server hello message
 	if load[0].encode("HEX") <> '16' or load[5].encode("HEX") <> '02':
 		return False
-	print("------------ Cert packet! -------------")
 	#look for web urls in raw
 	try:
 		issuer_begin_index = load.index('www.')
 	except ValueError:
 		return False
 	# get first URl which corresponds to the url of the certificate issuer
-	for i in range(issuer_begin_index+4, len(load)): #first w to end of load
-		if load[i] == '.':
+	_3_flag = False
+	for i in range(issuer_begin_index+4, len(load)):
+		if load[i:i+4].encode("HEX") == '2e636f6d': #.com
 			break
-	issuer_url = load[issuer_begin_index+4:i]
-	
+		elif load[i:i+4].encode("HEX") == '2e6e6574': #.net
+			break
+		elif load[i:i+4].encode("HEX") == '2e676f76': #.gov
+			break
+		elif load[i:i+4].encode("HEX") == '2e6f7267': #.org
+			break
+		elif load[i:i+3].encode("HEX") == '2e636f': #.co
+			_3_flag = True
+			break
+
+	if _3_flag:
+		issuer_url = load[issuer_begin_index:i+3]
+	else:
+		issuer_url = load[issuer_begin_index:i+4]
+
 	#look for next url, corresponds to url of the certificate subject
 	load_next = load[i+1:]
 	try:
@@ -86,6 +107,14 @@ def get_server_IP(packet, list_flag):
 	return packet[IP].dst
 
 #Print message to screen based on data found
+def print_super_likely(client_ip, server_ip):
+	print("Confidence Level: HIGHEST CONFIDENCE POSSIBLE")
+	print("Client with IP: {} (User)".format(client_ip))
+	print("Server with IP: {} (Tor Node)".format(server_ip))
+	print("\t1.) Source or Destination IP found in list of known Tor IPs")
+	print("\t2.) Certificate issuer and subject entropies are higher than normal for typical traffic")
+	print("\t3.) Certificate Issuer URL could not be accessed, signaling possible invalid certificate issuer\n")
+
 def print_highly_likely(client_ip, server_ip):
 	print("Confidence Level: HIGHLY LIKELY")
 	print("Client with IP: {} (User)".format(client_ip))
@@ -138,17 +167,7 @@ if __name__ == '__main__':
 				ip_list.append(line)
 	#Use scapy to read the input pcap into a pkt_list
 	pkt_list = rdpcap(pkts)
-	"""
-	pkt = pkt_list[4649]
-	raw = pkt[Raw].load
-	if raw[67].encode("HEX") <> '16':
-		print("bad")
-	if raw[72].encode("HEX") <> '0b':
-		print("also bad")
-	print(raw[67].encode("HEX"))
-	print(raw[72].encode("HEX"))
-	exit()
-	"""
+
 	tor_comm = {}
 	pkt_count = 0
 	#iterate through evey packet in the pcap file
@@ -156,6 +175,7 @@ if __name__ == '__main__':
 		pkt_count += 1
 		list_flag = 0
 		entropy_flag = False
+		ping_flag = False
 		#check to see if there is an IP segment in the packet
 		if IP in packet:
 			#check to see if the Tor source or destination is a Tor node (found in the tor list)
@@ -168,8 +188,14 @@ if __name__ == '__main__':
 			url = get_cert_urls(packet)
 			#if there is a certifiacte, calculate the entropies of the certificate URLs
 			if url:
-				if entropy(url[0]) > ENTROPY_THRESHOLD and entropy(url[1]) > ENTROPY_THRESHOLD:
+				if url[0][len(url[0])-4] == '.':
+					issuer_entropy = entropy(url[0][4:(len(url[0])-5)])
+				else:
+					issuer_entropy = entropy(url[0][4:(len(url[0])-4)])
+				if issuer_entropy > ENTROPY_THRESHOLD and entropy(url[1]) > ENTROPY_THRESHOLD:
 					entropy_flag = True
+				if not valid_url(url[0]):
+					ping_flag = True
 			#get the client/server IP of the packet
 			client_ip = get_client_IP(packet, list_flag)
 			server_ip = get_server_IP(packet, list_flag)
@@ -184,6 +210,11 @@ if __name__ == '__main__':
 			#	 and lower than expected entropy of the certificate
 			# 4: Neither client nor source found in tor list, but the certificate in the packet has
 			#    higher than expected entropy for normal traffic
+			if list_flag and entropy_flag and ping_flag:
+				if not in_list:
+					tor_comm[(client_ip, server_ip)] = 0
+				elif tor_comm[(client_ip, server_ip)] > 0:
+					tor_comm[(client_ip, server_ip)] = 0
 			if list_flag and entropy_flag:
 				if not in_list:
 					tor_comm[(client_ip, server_ip)] = 1
@@ -208,6 +239,8 @@ if __name__ == '__main__':
 	# Iterate through the tor client/server list and print findings
 	for k, v in tor_comm.items():
 		print("\nTOR TRAFFIC FOUND!")
+		if v == 0:
+			print_super_likely(k[0], k[1])
 		if v == 1:
 			print_highly_likely(k[0], k[1])
 		elif v == 2:
