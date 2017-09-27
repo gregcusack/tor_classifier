@@ -113,7 +113,7 @@ def print_likely_cert(client_ip, server_ip):
 def print_inconclusive(client_ip, server_ip):
 	print("Confidence Level: INCONCLUSIVE")
 	print("Client with IP: {} (User)".format(client_ip))
-	print("Server with IP: {} (Tor Node)".format(server_ip))
+	print("Server with IP: {} (Possible Tor Node)".format(server_ip))
 	print("Decision based on:")
 	print("\t1.) Neither Source nor Destination IPs found in list of known Tor nodes")
 	print("\t2.) Certificate issuer and subject entropies are higher than normal for typical traffic\n")
@@ -125,7 +125,7 @@ def tor_client_server_list(client_ip, server_ip, usr_list):
 
 #BEGIN
 if __name__ == '__main__':
-	ENTROPY_THRESHOLD = 2.9
+	ENTROPY_THRESHOLD = 3.0
 	pkts = sys.argv[1]
 	ip_list = []
 	#Open list of tor IPs and put them into a list, removing all carriage returns/new lines
