@@ -20,9 +20,9 @@
 	1. This populates the tor_list from the website mentioned above
 1. You can create a crontab that runs this script however often you want, so the list of known tor nodes is as updated as you would like
 	1. Open crontab: `crontab -e`
-	1. Set crontab: `* 1 * * * /path/to/python /path/to/scrape/function/scrape_tor_list.py>`
+	1. Set crontab: `0 1 * * * /path/to/python /path/to/scrape/function/scrape_tor_list.py>`
 		1. The crontab setup above will execute at 1am every night, essentially updating your local Tor list every night.
-		1. This crontab frequency can be changed however you would like by adjusting the: `* 1 * * *` part of the crontab
+		1. This crontab frequency can be changed however you would like by adjusting the: `0 1 * * *` part of the crontab
 			1. For a more detailed explanation of how to use crontab, see: http://kvz.io/blog/2007/07/29/schedule-tasks-on-linux-using-crontab/
 * Once your tor_list.txt is updated, it is time to find Tor traffic in your PCAP!
 	1. Run: `python classifier.py /path/to/pcap/file.pcap`
