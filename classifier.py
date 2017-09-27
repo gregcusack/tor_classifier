@@ -21,7 +21,6 @@ def get_cert_urls(packet):
 	#look for server hello message
 	if load[0].encode("HEX") <> '16' or load[5].encode("HEX") <> '02':
 		return False
-	print("------------ Cert packet! -------------")
 	#look for web urls in raw
 	try:
 		issuer_begin_index = load.index('www.')
@@ -113,7 +112,7 @@ def print_likely_cert(client_ip, server_ip):
 def print_inconclusive(client_ip, server_ip):
 	print("Confidence Level: INCONCLUSIVE")
 	print("Client with IP: {} (User)".format(client_ip))
-	print("Server with IP: {} (Tor Node)".format(server_ip))
+	print("Server with IP: {} (Possible Tor Node)".format(server_ip))
 	print("Decision based on:")
 	print("\t1.) Neither Source nor Destination IPs found in list of known Tor nodes")
 	print("\t2.) Certificate issuer and subject entropies are higher than normal for typical traffic\n")
@@ -125,7 +124,7 @@ def tor_client_server_list(client_ip, server_ip, usr_list):
 
 #BEGIN
 if __name__ == '__main__':
-	ENTROPY_THRESHOLD = 2.9
+	ENTROPY_THRESHOLD = 3.0
 	pkts = sys.argv[1]
 	ip_list = []
 	#Open list of tor IPs and put them into a list, removing all carriage returns/new lines
@@ -139,16 +138,16 @@ if __name__ == '__main__':
 	#Use scapy to read the input pcap into a pkt_list
 	pkt_list = rdpcap(pkts)
 	"""
-	pkt = pkt_list[4649]
+	pkt = pkt_list[23]
 	raw = pkt[Raw].load
-	if raw[67].encode("HEX") <> '16':
-		print("bad")
-	if raw[72].encode("HEX") <> '0b':
-		print("also bad")
-	print(raw[67].encode("HEX"))
-	print(raw[72].encode("HEX"))
+	print(entropy(raw))
+	pkt = pkt_list[34]
+	raw = pkt[Raw].load
+	print(entropy(raw))
 	exit()
 	"""
+	avg_entropy = 0
+	count = 0
 	tor_comm = {}
 	pkt_count = 0
 	#iterate through evey packet in the pcap file
@@ -168,6 +167,10 @@ if __name__ == '__main__':
 			url = get_cert_urls(packet)
 			#if there is a certifiacte, calculate the entropies of the certificate URLs
 			if url:
+				count += 2
+				e_url0 = entropy(url[0])
+				e_url1 = entropy(url[1])
+				avg_entropy += (e_url0+e_url1)
 				if entropy(url[0]) > ENTROPY_THRESHOLD and entropy(url[1]) > ENTROPY_THRESHOLD:
 					entropy_flag = True
 			#get the client/server IP of the packet
@@ -202,6 +205,24 @@ if __name__ == '__main__':
 			elif entropy_flag:
 				if not in_list:
 					tor_comm[(client_ip, server_ip)] = 4
+			#IP not in src/dst and no certificate located
+			"""
+			else:
+				try:
+					count += 1
+					load = packet[Raw].load
+					#load = packet[TCP].summary()
+					entr = entropy(load)
+					avg_entropy += entr
+					print(entr)
+					#if entr > 7.9:
+					#	print("Entropy > 7, user possibly using bridge node")
+				except IndexError:
+					pass
+			"""
+	if avg_entropy <> 0 and count <> 0:
+		print("Avg entropy: {}".format(avg_entropy/count))
+	
 	if not tor_comm:
 		print("No Tor Traffic Detected")
 
