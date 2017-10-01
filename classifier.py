@@ -245,7 +245,6 @@ if __name__ == '__main__':
 					tor_comm[(client_ip, server_ip)] = 1
 				elif tor_comm[(client_ip, server_ip)] > 1:
 					tor_comm[(client_ip, server_ip)] = 1
-
 			elif list_flag and url:
 				if not in_list:
 					tor_comm[(client_ip, server_ip)] = 2
