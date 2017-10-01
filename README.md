@@ -46,7 +46,7 @@
 * Currently, the pluggable transport Obfs4 is used to fully obfuscate all Tor traffic flowing from a client to a bridge node.
 	* Packets are fully encrypted and the traffic looks like no normal protocol.
 	* Accodring to Tor Documentation (https://blog.torproject.org/obfsproxy-next-step-censorship-arms-race), you can detect Obsf3 by running an entropy test on packets since the obfuscated bridge node traffic has higher entropy than typical network traffic
-* Basically for packet sent to a specific server, the packet is converted into a bitstream and XOR’d with all other packets sent to that specific server.  The idea is that we should see a lot of 0s in the resulting XORs for normal data because a lot of packets are formatted the same (headers are very similar), but we should see a lot of 1s for bridge node traffic because all of the data is random.
+* Basically, for every packet sent to a specific server, the packet is converted into a bitstream and XOR’d with all other packets sent to that specific server.  The idea is that we should see a lot of 0s in the resulting XORs for normal data because a lot of packets are formatted the same (headers are very similar), but we should see a lot of 1s for bridge node traffic because all of the data is random.
 * Current status: 
 	* `find_bridge_nodes.py` returns a lot of false positives.  This script needs to change to just look at the client/server handshakes and not XOR any data packets.  Data packets are going to result in a lot of 1s for both bridge node and regular traffic.  Since data packets are factored into the current implementation, this won’t give us a great idea but at least gives us a starting point.
 
