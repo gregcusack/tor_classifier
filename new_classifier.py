@@ -1,6 +1,6 @@
 from scapy.all import *
 import os
-#import re
+import binascii
 import math
 
 # Tor certs don't have same issuer and subject, but normal traffic does (not always though)
@@ -152,6 +152,25 @@ def tor_client_server_list(client_ip, server_ip, usr_list):
 		return True
 	return False
 
+
+def new_entropy(string):
+        "Calculates the Shannon entropy of a string"
+
+        # get probability of chars in string
+        prob = [ float(string.count(c)) / len(string) for c in dict.fromkeys(list(string)) ]
+
+        # calculate the entropy
+        entropy = - sum([ p * math.log(p) / math.log(2.0) for p in prob ])
+
+        return entropy
+
+def entropy_ideal(length):
+        "Calculates the ideal Shannon entropy of a string with given length"
+
+        prob = 1.0 / length
+
+        return -1.0 * length * prob * math.log(prob) / math.log(2.0)
+
 #BEGIN
 if __name__ == '__main__':
 	ENTROPY_THRESHOLD = 3.0
@@ -219,16 +238,67 @@ if __name__ == '__main__':
 			for x in range(num_v-1):
 				res = res ^ v[x+1][i]
 			array.append(str(res))
-		big_arr.append(array)
-		IP_entropy_dict[k] = entropy(bytearray(int(y,10) for y in array))
+		hex_val = str(bytearray(int(y,10) for y in array)).encode("HEX")
+		#print(hex_val)
+		len_bin = len(hex_val)*4
+		bin_arr = (bin(int(hex_val, 16))[2:]).zfill(len_bin)
+		#exit()
+		#print(bin_arr)
+		act_ideal_arr = []
+		act_ideal_arr.append(new_entropy(bin_arr))
+		act_ideal_arr.append(entropy_ideal(len_bin))
+		IP_entropy_dict[k] = act_ideal_arr
+		num_zeros = bin_arr.count('0')
+		num_ones = bin_arr.count('1')
+		ratio = num_ones/float(num_zeros) #want to be small to ID Bridge nodes
+		if ratio < 0.3:
+			print(k)
+			print(num_zeros)
+			print(num_ones)
+			print(ratio)
+			print("\n")
+		#print(IP_entropy_dict[k])
+		#IP_entropy_dict[k].append(new_entropy)
+		#big_arr.append(bytearray(int(y,10) for y in array))
+
+		#big_arr.append(int(y,10) for y in array)
+		#IP_entropy_dict[k] = entropy(bytearray(int(y,10) for y in array))
+
+	"""	
+	hex_val = str(big_arr[0]).encode("HEX")
+	len_bin = len(hex_val)*4
+	print(str(big_arr[0]).encode("HEX"))
+
+	z = (bin(int(hex_val, 16))[2:]).zfill(len_bin)
+	print(len(z))
+	print(len(hex_val))
+
+	e = new_entropy(z)
+	print(entropy_ideal(len_bin))
+	print(e)
+	print(z)
+	"""
+	#b_string = binascii.unhexlify(str(big_arr[0]).encode("HEX"))
+	#print(type(b_string))
+	#z = int(b_string)
+	#print(big_arr[0])
+	exit()
+	#print(str(big_arr[0]).encode("HEX"))
+	#print("\n")
+	#print(str(big_arr[1]).encode("HEX"))
 	
 	#for i in range(33):
 	#	print(IP_entropy_dict[i])
 	#for k in IP_entropy_dict.items():
 	#	print(IP_entropy_dict[k])
-	for k, v in IP_entropy_dict.items():
-		if v > 5:
-			print("IP: {}\nEntropy: {}\n\n".format(k, v))
+	
+
+	#for k, v in IP_entropy_dict.items():
+	#	if v > 5:
+	#		print("IP: {}\nEntropy: {}\n\n".format(k, v))
+	
+
+
 	#print(IP_entropy_dict)
 		#print(big_arr)
 	#print(len(big_arr))
@@ -246,7 +316,7 @@ if __name__ == '__main__':
 	#print(entropy(byte))
 
 	#print(len(array))
-	exit()
+	#exit()
 		#big_arr.append(array)
 		
 		#print(array)
