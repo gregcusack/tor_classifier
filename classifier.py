@@ -271,7 +271,7 @@ if __name__ == '__main__':
 		print("\nTOR TRAFFIC FOUND!")
 		if v == 0:
 			print_super_likely(k[0], k[1])
-		if v == 1:
+		elif v == 1:
 			print_highly_likely(k[0], k[1])
 		elif v == 2:
 			print_likely_cert(k[0], k[1])
