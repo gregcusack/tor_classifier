@@ -36,14 +36,19 @@ def get_cert_urls(packet):
 		return False
 	# get first URl which corresponds to the url of the certificate issuer
 	_3_flag = False
+	found_flag = False
 	for i in range(issuer_begin_index+4, len(load)):
 		if load[i:i+4].encode("HEX") == '2e636f6d': #.com
+			found_flag = True
 			break
 		elif load[i:i+4].encode("HEX") == '2e6e6574': #.net
+			found_flag = True
 			break
 		elif load[i:i+4].encode("HEX") == '2e676f76': #.gov
+			found_flag = True
 			break
 		elif load[i:i+4].encode("HEX") == '2e6f7267': #.org
+			found_flag = True
 			break
 		elif load[i:i+3].encode("HEX") == '2e636f': #.co
 			_3_flag = True
@@ -51,8 +56,10 @@ def get_cert_urls(packet):
 
 	if _3_flag:
 		issuer_url = load[issuer_begin_index:i+3]
-	else:
+	elif found_flag:
 		issuer_url = load[issuer_begin_index:i+4]
+	else:
+		return False
 
 	#look for next url, corresponds to url of the certificate subject
 	load_next = load[i+1:]
