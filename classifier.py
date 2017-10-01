@@ -139,6 +139,18 @@ def print_likely_cert(client_ip, server_ip):
 	print("\t1.) Source or Destination IP found in list of known Tor IPs")
 	print("\t2.) Certificate issuer and subject entropy is lower than normal for typical Tor traffic\n")
 
+def print_some_confidence(client_ip, server_ip):
+	print("Confidence Level: SOME CONFIDENCE (KEEP ON EYE ON THIS SERVER IP)")
+	print("Client with IP: {} (User)".format(client_ip))
+	print("Server with IP: {} (Tor Node)".format(server_ip))
+	print("Decision based on:")
+	print("\t1.) Neither Source nor Destination IP found in list of known Tor IPs")
+	print("\t2.) Certificate issuer and subject entropies are higher than normal for typical traffic")
+	print("\t3.) Certificate issuer is not online (No ping response received)")
+	print("There is a possibility that this Client/Server connection is a new Tor connection. \
+		The Tor node may not be registered into the list of known Tor nodes yet.  \
+		Keep an eye on this possible Tor IP and check it against the known Tor list in a day or so.\n")
+
 def print_inconclusive(client_ip, server_ip):
 	print("Confidence Level: INCONCLUSIVE")
 	print("Client with IP: {} (User)".format(client_ip))
@@ -169,6 +181,7 @@ if __name__ == '__main__':
 	pkt_list = rdpcap(pkts)
 
 	tor_comm = {}
+	#IP_list = []
 	pkt_count = 0
 	#iterate through evey packet in the pcap file
 	for packet in pkt_list:
@@ -178,6 +191,11 @@ if __name__ == '__main__':
 		ping_flag = False
 		#check to see if there is an IP segment in the packet
 		if IP in packet:
+			# Uncomment below lines and IP_list = [] line above to get data on packets looked at
+			#if packet[IP].src not in IP_list:
+			#	IP_list.append(packet[IP].src)
+			#if packet[IP].dst not in IP_list:
+			#	IP_list.append(packet[IP].dst)
 			#check to see if the Tor source or destination is a Tor node (found in the tor list)
 			if isTorSrc(packet):
 				list_flag = 1
@@ -215,11 +233,12 @@ if __name__ == '__main__':
 					tor_comm[(client_ip, server_ip)] = 0
 				elif tor_comm[(client_ip, server_ip)] > 0:
 					tor_comm[(client_ip, server_ip)] = 0
-			if list_flag and entropy_flag:
+			elif list_flag and entropy_flag:
 				if not in_list:
 					tor_comm[(client_ip, server_ip)] = 1
 				elif tor_comm[(client_ip, server_ip)] > 1:
 					tor_comm[(client_ip, server_ip)] = 1
+
 			elif list_flag and url:
 				if not in_list:
 					tor_comm[(client_ip, server_ip)] = 2
@@ -230,9 +249,14 @@ if __name__ == '__main__':
 					tor_comm[(client_ip, server_ip)] = 3
 				elif tor_comm[(client_ip, server_ip)] > 3:
 					tor_comm[(client_ip, server_ip)] = 3
-			elif entropy_flag:
+			elif entropy_flag and ping_flag:
 				if not in_list:
 					tor_comm[(client_ip, server_ip)] = 4
+				elif tor_comm[(client_ip, server_ip)] > 4:
+					tor_comm[(client_ip, server_ip)] = 4
+			elif entropy_flag:
+				if not in_list:
+					tor_comm[(client_ip, server_ip)] = 5
 	if not tor_comm:
 		print("No Tor Traffic Detected")
 
@@ -248,5 +272,13 @@ if __name__ == '__main__':
 		elif v == 3:
 			print_likely_no_cert(k[0], k[1])
 		elif v == 4:
+			print_some_confidence(k[0], k[1])
+		elif v == 5:
 			print_inconclusive(k[0], k[1])
 		print("-----------------------------------------------------------------")
+
+	#print(len(IP_list))
+
+
+
+
